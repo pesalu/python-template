@@ -1,0 +1,107 @@
+# Declares how the project is built and what's needed to build it.
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# Core project metadata: name, version, dependencies, and package info.
+[project]
+name = "python-template"
+version = "0.1.0"
+description = "A modern Python project template"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = []
+
+# Links shown on PyPI / project pages.
+[project.urls]
+Homepage = "https://github.com/yourname/python-template"
+
+# CLI entry points installed with the package (creates a `python-template` command).
+[project.scripts]
+python-template = "python_template.main:main"
+
+# Optional dependency groups (installed via `uv sync --group dev` or similar), separate
+# from the runtime dependencies declared in [project].
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "pip-audit>=2.7",
+    "pre-commit>=4.0",
+]
+
+# Tells hatchling's wheel builder which package directory to include in the build.
+[tool.hatch.build.targets.wheel]
+packages = ["src/python_template"]
+
+# Ruff (linter/formatter) general settings.
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+# Which lint rule sets are enabled/disabled.
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "RUF", # ruff-specific rules
+]
+ignore = []
+
+# Isort-specific settings within ruff's lint rules (which imports count as "first-party").
+[tool.ruff.lint.isort]
+known-first-party = ["python_template"]
+
+# Ruff's code formatter (autoformatting) settings.
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# Mypy static type-checker settings; strict mode enables most optional checks.
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_configs = true
+warn_return_any = true
+disallow_untyped_defs = true
+files = ["src", "tests"]
+
+# Per-module override: relax strictness for test files (tests often skip type hints).
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+# Pytest configuration, including default CLI options and where tests live.
+[tool.pytest.ini_options]
+addopts = "--cov=python_template --cov-report=term-missing"
+testpaths = ["tests"]
+
+# Coverage.py: what to measure when collecting coverage during test runs.
+[tool.coverage.run]
+source = ["src"]
+branch = true
+
+# Coverage.py: lines/patterns to exclude from coverage reporting.
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
