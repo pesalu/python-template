@@ -1,7 +1,7 @@
 """Pipeline (scrape) tests for counting / dedup / pagination: AC5, AC7-AC11, AC16, AC17, AC20."""
 
-from python_template.scraper.pipeline import scrape
 from tests.helpers import make_card, make_page, write_pages
+from web_scraper.pipeline import scrape
 
 
 def test_scrape_skips_missing_title_counts_ac5(tmp_path):

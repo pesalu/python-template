@@ -3,8 +3,8 @@ import contextlib
 import os
 import sys
 
-from python_template.scraper.output import write_csv, write_jsonl
-from python_template.scraper.pipeline import InputReadError, scrape
+from web_scraper.output import write_csv, write_jsonl
+from web_scraper.pipeline import InputReadError, scrape
 
 
 def _positive_int(value: str) -> int:

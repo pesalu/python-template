@@ -9,7 +9,6 @@ import os
 
 import pytest
 
-from python_template.main import build_parser, validate_output_name
 from tests.helpers import (
     EXPECTED_CSV,
     EXPECTED_CSV_HEADER_ONLY,
@@ -19,6 +18,7 @@ from tests.helpers import (
     make_page,
     write_pages,
 )
+from web_scraper.main import build_parser, validate_output_name
 
 
 def _write_single_page(tmp_path, cards, next_href=None):
@@ -246,7 +246,7 @@ def test_cli_atomic_write_failure_leaves_no_output_64(tmp_path, run_main, monkey
     remove the temp files it created and return 1, so the output directory holds
     neither a partial/looks-successful final file nor any leftover ``*.tmp``.
     """
-    import python_template.main as main_module
+    import web_scraper.main as main_module
 
     def _boom(records, path):
         raise OSError("disk full")
@@ -272,7 +272,7 @@ def test_cli_second_replace_failure_rolls_back_ac_64(tmp_path, run_main, monkeyp
     implementation; the second (CSV temp -> final) raises OSError. main() must
     remove the already-committed JSONL final plus any temp files and return 1.
     """
-    import python_template.main as main_module
+    import web_scraper.main as main_module
 
     real_replace = os.replace
     calls = {"n": 0}

@@ -2,8 +2,8 @@
 
 import pytest
 
-from python_template.main import main
 from tests.helpers import make_card, write_pages
+from web_scraper.main import main
 
 
 @pytest.fixture

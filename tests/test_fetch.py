@@ -2,7 +2,7 @@
 
 import os
 
-from python_template.scraper.fetch import read_page, resolve_next_path
+from web_scraper.fetch import read_page, resolve_next_path
 
 
 def test_read_page_returns_utf8_content(tmp_path):

@@ -1,12 +1,12 @@
 """Output-layer tests (JSONL/CSV serialization) from spec AC2, AC3, AC4, AC12."""
 
-from python_template.scraper.output import write_csv, write_jsonl
 from tests.helpers import (
     CANONICAL_RECORDS,
     EXPECTED_CSV,
     EXPECTED_CSV_HEADER_ONLY,
     EXPECTED_JSONL,
 )
+from web_scraper.output import write_csv, write_jsonl
 
 
 def test_write_jsonl_two_records_ac2(tmp_path):

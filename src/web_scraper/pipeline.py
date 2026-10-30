@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 
-from python_template.scraper.fetch import read_page, resolve_next_path
-from python_template.scraper.parse import find_next_page, normalize_text, parse_listings
+from web_scraper.fetch import read_page, resolve_next_path
+from web_scraper.parse import find_next_page, normalize_text, parse_listings
 
 _FIELDS = ["title", "price", "location", "rooms", "area", "detail_url"]
 

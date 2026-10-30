@@ -2,7 +2,7 @@
 
 Status: Draft (round 5)
 Feature file: `docs/specs/web-scraper.md`
-Applies to package: `src/python_template/`
+Applies to package: `src/web_scraper/`
 
 > Project note: this is a plain Python package (hatchling + uv, Python `>=3.12`),
 > not a Databricks bundle. There is no Spark, no catalog/schema, and no
@@ -435,11 +435,10 @@ in counts (section 7).
 ## 6. CLI contract
 
 ### 6.1 Entry point
-- The scraper reuses the existing console-script entry point declared in
+- The scraper is exposed through the console-script entry point declared in
   `pyproject.toml` `[project.scripts]`:
-  `python-template = "python_template.main:main"`. Invoked as `python-template`
-  (or `uv run python-template`). The entry-point name is not changed by this
-  feature.
+  `web-scraper = "web_scraper.main:main"`. Invoked as `web-scraper`
+  (or `uv run web-scraper`).
 
 ### 6.2 Arguments
 | Argument        | Required | Type   | Default            | Meaning                                                        |

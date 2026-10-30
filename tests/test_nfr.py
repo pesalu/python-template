@@ -10,7 +10,7 @@ import socket
 import time
 import tracemalloc
 
-from python_template.main import main
+from web_scraper.main import main
 
 
 def _run_scrape(input_path, output_dir):

@@ -1,11 +1,11 @@
 """Parse-layer tests (pure functions) derived from spec AC1, AC4-AC8, AC17, AC19."""
 
-from python_template.scraper.parse import (
+from tests.helpers import make_card, make_page
+from web_scraper.parse import (
     find_next_page,
     normalize_text,
     parse_listings,
 )
-from tests.helpers import make_card, make_page
 
 AC1_CARD = """
 <article class="listing-card">
