@@ -24,8 +24,13 @@ Provide two companion command-line tools:
    sites), mapping them, via a caller-supplied profile, onto the same six-field
    record schema and JSONL/CSV output as the HTML parser.
 
+A third tool, `web-scraper-extract`, captures the **raw original JSON** (the
+embedded state, or a sub-node) as-is, without mapping to the six-field model, so
+data capture and model-mapping remain separate steps.
+
 ### In scope
 - A thin HTTP(S) GET to a file (`web-scraper-fetch`).
+- Raw capture of the embedded JSON, unmapped (`web-scraper-extract`).
 - Extraction of a `window.__INITIAL_STATE__` object, tolerating the JS literal
   `undefined`, and config-driven mapping to records (`web-scraper-json`).
 
@@ -138,6 +143,14 @@ UTF-8.
   files so no partial or looks-successful output remains (exit 1).
 - **R12 — Idempotency.** Re-running either command with the same inputs produces
   the same output and overwrites prior output; neither appends.
+- **R13 — Raw capture.** `web-scraper-extract` writes the embedded state as-is:
+  the whole `__INITIAL_STATE__` object when no `--state-path` is given, or the
+  node at that dotted path otherwise. With `--jsonl`, an array node is written as
+  one JSON object per line; otherwise the node is written as a single
+  pretty-printed JSON document (UTF-8, non-ASCII preserved). No field mapping or
+  profile is applied. The write is atomic (temp file then `os.replace`, temp
+  removed on failure). A missing marker, unbalanced object, or missing path is an
+  error (exit 1).
 
 ---
 
@@ -172,6 +185,15 @@ counted separately in the MVP).
 - Exit codes: 0 success; 1 unreadable input, invalid/unloadable profile,
   extraction/selection failure, or output write failure; 2 argument error
   (missing `--input`/`--output-dir`/`--profile`, or invalid/duplicate output names).
+
+### 6.3 `web-scraper-extract`
+- Entry point: `web-scraper-extract = "web_scraper.extractcli:main"`.
+- Args: `--input` (required saved HTML), `--output` (required JSON file),
+  `--state-path` (optional dotted path), `--jsonl` (optional flag).
+- On success prints `extracted <N> to <path>` (`<N>` = array length when the node
+  is a list, else 1) and exits 0.
+- Exit codes: 0 success; 1 unreadable input, extraction/selection failure, or
+  output write failure; 2 argument error (missing `--input`/`--output`).
 
 ---
 
@@ -257,6 +279,12 @@ counted separately in the MVP).
 - **Given** `--jsonl-name a/b.jsonl`.
 - **When** `web-scraper-json` runs with an otherwise valid invocation.
 - **Then** it exits 2 and writes no output.
+
+### AC12 — Raw capture preserves original data (R13)
+- **Given** state `{"data": {"results": {"items": [{"ref": "a1", "cost": 100}]}}}`.
+- **When** `web-scraper-extract --state-path data.results.items --jsonl` runs.
+- **Then** exit 0, and the output's single line parses back to
+  `{"ref": "a1", "cost": 100}` (original keys, unmapped).
 
 ---
 

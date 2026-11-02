@@ -112,16 +112,30 @@ def extract_initial_state(html: str) -> dict[str, Any]:
     return data
 
 
-def select_listings(state: dict[str, Any], dotted_path: str) -> list[Any]:
-    """Navigate ``dotted_path`` in ``state`` and return the listings array."""
+def select_node(state: dict[str, Any], dotted_path: str) -> Any:
+    """Navigate ``dotted_path`` in ``state`` and return the node found there."""
     node: Any = state
     for part in dotted_path.split("."):
         if not isinstance(node, dict) or part not in node:
-            raise InitialStateError(f"listings path not found: {dotted_path!r} (at {part!r})")
+            raise InitialStateError(f"path not found: {dotted_path!r} (at {part!r})")
         node = node[part]
+    return node
+
+
+def select_listings(state: dict[str, Any], dotted_path: str) -> list[Any]:
+    """Navigate ``dotted_path`` in ``state`` and return the listings array."""
+    node = select_node(state, dotted_path)
     if not isinstance(node, list):
         raise InitialStateError(f"listings path {dotted_path!r} is not an array")
     return node
+
+
+def extract_raw(html: str, state_path: str | None = None) -> Any:
+    """Return the raw (unmapped) embedded state, or the node at ``state_path``."""
+    state = extract_initial_state(html)
+    if state_path:
+        return select_node(state, state_path)
+    return state
 
 
 def _to_str(value: Any) -> str | None:

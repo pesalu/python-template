@@ -83,6 +83,27 @@ mapping), `--jsonl-name`/`--csv-name` (optional). As always, **check the site's
 one thing, but many sites disallow their underlying `/api` endpoints, and
 robots.txt permission is not the same as terms-of-service permission.
 
+### Capture the raw JSON first (optional)
+
+If you prefer to keep the **original JSON data** before mapping it to the
+six-field model, `web-scraper-extract` saves the embedded state as-is — no
+profile, no mapping:
+
+```bash
+# Dump the whole __INITIAL_STATE__ object (pretty-printed)
+uv run web-scraper-extract --input page1.html --output raw.json
+
+# Or just the listings array, one raw object per line
+uv run web-scraper-extract --input page1.html --output items.jsonl \
+  --state-path data.results.items --jsonl
+```
+
+This keeps data capture and model-mapping as separate steps: fetch → extract raw
+JSON → (later) map to your model with `web-scraper-json`. Arguments: `--input`
+(saved HTML), `--output` (JSON file), `--state-path` (optional dotted path to a
+sub-node), `--jsonl` (optional; when the node is an array, write one object per
+line). Exit codes: `0` success, `1` on read/extract/write failure.
+
 ### Run the parser
 
 ```bash
