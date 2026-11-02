@@ -26,3 +26,8 @@ htmlcov/
 
 # OS
 .DS_Store
+
+# Scraped artifacts (downloaded pages and generated output)
+page*.html
+/out/
+/out_*/

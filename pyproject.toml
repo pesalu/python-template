@@ -25,10 +25,12 @@ dependencies = ["beautifulsoup4>=4.12"]
 Homepage = "https://github.com/yourname/sample-web-scraper"
 
 # CLI entry points installed with the package. `web-scraper` parses a saved HTML
-# file (stage 2); `web-scraper-fetch` downloads a page to an HTML file (stage 1).
+# file (stage 2); `web-scraper-fetch` downloads a page to an HTML file (stage 1);
+# `web-scraper-json` parses listings embedded as a __INITIAL_STATE__ JSON blob.
 [project.scripts]
 web-scraper = "web_scraper.main:main"
 web-scraper-fetch = "web_scraper.download:main"
+web-scraper-json = "web_scraper.jsoncli:main"
 
 # Optional dependency groups (installed via `uv sync --group dev` or similar), separate
 # from the runtime dependencies declared in [project].
