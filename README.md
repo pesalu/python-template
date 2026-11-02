@@ -121,7 +121,7 @@ Each page is matched by class names (not tag names). A minimal page looks like:
   <article class="listing-card">
     <h2 class="listing-title">Cozy Downtown Apartment</h2>
     <span class="listing-price">€250,000</span>
-    <span class="listing-location">Helsinki, Kallio</span>
+    <span class="listing-location">Rivertown, Dockside</span>
     <span class="listing-rooms">3 rooms</span>
     <span class="listing-area">72 m²</span>
     <a class="listing-link" href="/detail/123">View details</a>

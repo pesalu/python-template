@@ -29,7 +29,7 @@ def test_write_missing_optional_null_vs_empty_ac4(tmp_path):
     record = {
         "title": "No Price Listing",
         "price": None,
-        "location": "Tampere",
+        "location": "Hillcrest",
         "rooms": None,
         "area": None,
         "detail_url": "/detail/200",
@@ -40,12 +40,12 @@ def test_write_missing_optional_null_vs_empty_ac4(tmp_path):
     write_csv([record], str(csv_path))
     expected_jsonl = (
         b'{"title": "No Price Listing", "price": null, '
-        b'"location": "Tampere", "rooms": null, '
+        b'"location": "Hillcrest", "rooms": null, '
         b'"area": null, "detail_url": "/detail/200"}\n'
     )
     expected_csv = (
         b"title,price,location,rooms,area,detail_url\n"
-        b"No Price Listing,,Tampere,,,/detail/200\n"
+        b"No Price Listing,,Hillcrest,,,/detail/200\n"
     )
     assert jsonl_path.read_bytes() == expected_jsonl
     assert csv_path.read_bytes() == expected_csv

@@ -138,7 +138,7 @@ non-goals in section 1.)
       <article class="listing-card">
         <h2 class="listing-title">Cozy Downtown Apartment</h2>
         <span class="listing-price">€250,000</span>
-        <span class="listing-location">Helsinki, Kallio</span>
+        <span class="listing-location">Rivertown, Dockside</span>
         <span class="listing-rooms">3 rooms</span>
         <span class="listing-area">72 m²</span>
         <a class="listing-link" href="/detail/123">View details</a>
@@ -146,7 +146,7 @@ non-goals in section 1.)
       <article class="listing-card">
         <h2 class="listing-title">Seaside Studio</h2>
         <span class="listing-price">€180,000</span>
-        <span class="listing-location">Espoo</span>
+        <span class="listing-location">Lakeside</span>
         <span class="listing-rooms">1 room</span>
         <span class="listing-area">28 m²</span>
         <a class="listing-link" href="/detail/124">View details</a>
@@ -226,7 +226,7 @@ R6-normalized (F1.3).
 
 Example line (from the first card in 2.3):
 ```json
-{"title": "Cozy Downtown Apartment", "price": "€250,000", "location": "Helsinki, Kallio", "rooms": "3 rooms", "area": "72 m²", "detail_url": "/detail/123"}
+{"title": "Cozy Downtown Apartment", "price": "€250,000", "location": "Rivertown, Dockside", "rooms": "3 rooms", "area": "72 m²", "detail_url": "/detail/123"}
 ```
 
 ### 3.5 CSV encoding rules
@@ -524,7 +524,7 @@ against the pure parse/output functions (R16) or the CLI.
     <h2 class="listing-title">  Cozy   Downtown
       Apartment </h2>
     <span class="listing-price">€250,000</span>
-    <span class="listing-location">Helsinki, Kallio</span>
+    <span class="listing-location">Rivertown, Dockside</span>
     <span class="listing-rooms">3 rooms</span>
     <span class="listing-area">72 m²</span>
     <a class="listing-link" href="/detail/123">View details</a>
@@ -533,7 +533,7 @@ against the pure parse/output functions (R16) or the CLI.
 - **When** the page is parsed.
 - **Then** exactly one record is produced:
   ```json
-  {"title": "Cozy Downtown Apartment", "price": "€250,000", "location": "Helsinki, Kallio", "rooms": "3 rooms", "area": "72 m²", "detail_url": "/detail/123"}
+  {"title": "Cozy Downtown Apartment", "price": "€250,000", "location": "Rivertown, Dockside", "rooms": "3 rooms", "area": "72 m²", "detail_url": "/detail/123"}
   ```
   Note the title’s internal whitespace run (spaces + newline + indentation) is
   collapsed to single spaces and trimmed (R6).
@@ -543,8 +543,8 @@ against the pure parse/output functions (R16) or the CLI.
 - **When** the records are written to `listings.jsonl`.
 - **Then** the file contains exactly two LF-terminated lines, in card order:
   ```
-  {"title": "Cozy Downtown Apartment", "price": "€250,000", "location": "Helsinki, Kallio", "rooms": "3 rooms", "area": "72 m²", "detail_url": "/detail/123"}
-  {"title": "Seaside Studio", "price": "€180,000", "location": "Espoo", "rooms": "1 room", "area": "28 m²", "detail_url": "/detail/124"}
+  {"title": "Cozy Downtown Apartment", "price": "€250,000", "location": "Rivertown, Dockside", "rooms": "3 rooms", "area": "72 m²", "detail_url": "/detail/123"}
+  {"title": "Seaside Studio", "price": "€180,000", "location": "Lakeside", "rooms": "1 room", "area": "28 m²", "detail_url": "/detail/124"}
   ```
   with UTF-8 encoding and non-ASCII characters preserved (`€`, `²`).
 
@@ -554,10 +554,10 @@ against the pure parse/output functions (R16) or the CLI.
 - **Then** the file is exactly (LF line endings, header first):
   ```csv
   title,price,location,rooms,area,detail_url
-  Cozy Downtown Apartment,"€250,000","Helsinki, Kallio",3 rooms,72 m²,/detail/123
-  Seaside Studio,"€180,000",Espoo,1 room,28 m²,/detail/124
+  Cozy Downtown Apartment,"€250,000","Rivertown, Dockside",3 rooms,72 m²,/detail/123
+  Seaside Studio,"€180,000",Lakeside,1 room,28 m²,/detail/124
   ```
-  `"€250,000"` and `"Helsinki, Kallio"` are quoted because they contain commas;
+  `"€250,000"` and `"Rivertown, Dockside"` are quoted because they contain commas;
   other fields are unquoted.
 
 ### AC4 — Missing optional field becomes null/empty (R11)
@@ -565,7 +565,7 @@ against the pure parse/output functions (R16) or the CLI.
   ```html
   <article class="listing-card">
     <h2 class="listing-title">No Price Listing</h2>
-    <span class="listing-location">Tampere</span>
+    <span class="listing-location">Hillcrest</span>
     <a class="listing-link" href="/detail/200">View</a>
   </article>
   ```
@@ -573,11 +573,11 @@ against the pure parse/output functions (R16) or the CLI.
 - **When** parsed and written.
 - **Then** the JSONL line is:
   ```json
-  {"title": "No Price Listing", "price": null, "location": "Tampere", "rooms": null, "area": null, "detail_url": "/detail/200"}
+  {"title": "No Price Listing", "price": null, "location": "Hillcrest", "rooms": null, "area": null, "detail_url": "/detail/200"}
   ```
   and the CSV data row is:
   ```csv
-  No Price Listing,,Tampere,,,/detail/200
+  No Price Listing,,Hillcrest,,,/detail/200
   ```
 
 ### AC5 — Invalid record (missing title) skipped (R7, R8)
@@ -826,9 +826,9 @@ NFR3 all measure this same full-scrape operation.
   user to confirm. The two passages no longer prescribe conflicting outcomes: A3
   governs; R-open-2 tracks the final decision.
 - **RL-2 (CSV example corrected).** An illustrative CSV snippet in section 3.5
-  showed `Helsinki, Kallio` unquoted, which contradicted the minimal-quoting rule
+  showed `Rivertown, Dockside` unquoted, which contradicted the minimal-quoting rule
   in the same section. The authoritative, correctly quoted CSV is given in AC3,
-  and section 3.5 now explicitly notes the quoting of `"Helsinki, Kallio"`.
+  and section 3.5 now explicitly notes the quoting of `"Rivertown, Dockside"`.
 - **RL-3 (consistency check passed).** Verified field order (section 3.3) matches
   JSONL (3.4), CSV header (3.5), and all ACs; counts identity
   `cards = written + skipped_invalid + skipped_duplicate` (6.5) is consistent
@@ -844,7 +844,7 @@ filenames `--jsonl-name` / `--csv-name`; (5) NFR1/NFR2/NFR3 as hard deterministi
 unit tests with specified fixture scale and measurement method.
 
 - **F1.1 (CONTRADICTION fixed).** Removed the literally-incorrect unquoted
-  `Helsinki, Kallio` illustrative CSV row from section 3.5. AC3 is now the single
+  `Rivertown, Dockside` illustrative CSV row from section 3.5. AC3 is now the single
   authoritative CSV example; section 3.5 explicitly defers to it.
 - **F1.2 (CONTRADICTION fixed).** Unified all next-page failure modes to exit 0
   (graceful stop) across R13a, section 6.4, and section 7; removed the

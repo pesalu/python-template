@@ -38,7 +38,7 @@ def nfr_fixture(tmp_path):
             make_card(
                 title=f"Listing {page}-{i}",
                 price=f"€{page}{i:02d},000",
-                location="Helsinki",
+                location="Rivertown",
                 rooms="3 rooms",
                 area="72 m²",
                 href=f"/detail/{page}_{i}",

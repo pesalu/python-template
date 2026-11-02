@@ -79,7 +79,7 @@ CANONICAL_RECORDS = [
     {
         "title": "Cozy Downtown Apartment",
         "price": "€250,000",
-        "location": "Helsinki, Kallio",
+        "location": "Rivertown, Dockside",
         "rooms": "3 rooms",
         "area": "72 m²",
         "detail_url": "/detail/123",
@@ -87,7 +87,7 @@ CANONICAL_RECORDS = [
     {
         "title": "Seaside Studio",
         "price": "€180,000",
-        "location": "Espoo",
+        "location": "Lakeside",
         "rooms": "1 room",
         "area": "28 m²",
         "detail_url": "/detail/124",
@@ -101,7 +101,7 @@ def canonical_cards():
         make_card(
             title="Cozy Downtown Apartment",
             price="€250,000",
-            location="Helsinki, Kallio",
+            location="Rivertown, Dockside",
             rooms="3 rooms",
             area="72 m²",
             href="/detail/123",
@@ -109,7 +109,7 @@ def canonical_cards():
         make_card(
             title="Seaside Studio",
             price="€180,000",
-            location="Espoo",
+            location="Lakeside",
             rooms="1 room",
             area="28 m²",
             href="/detail/124",
@@ -120,19 +120,19 @@ def canonical_cards():
 # Expected serialized bytes for the two canonical records (AC2 / AC3).
 JSONL_LINE_1 = (
     '{"title": "Cozy Downtown Apartment", "price": "€250,000", '
-    '"location": "Helsinki, Kallio", "rooms": "3 rooms", '
+    '"location": "Rivertown, Dockside", "rooms": "3 rooms", '
     '"area": "72 m²", "detail_url": "/detail/123"}'
 )
 JSONL_LINE_2 = (
     '{"title": "Seaside Studio", "price": "€180,000", '
-    '"location": "Espoo", "rooms": "1 room", '
+    '"location": "Lakeside", "rooms": "1 room", '
     '"area": "28 m²", "detail_url": "/detail/124"}'
 )
 EXPECTED_JSONL = (JSONL_LINE_1 + "\n" + JSONL_LINE_2 + "\n").encode("utf-8")
 
 CSV_HEADER = "title,price,location,rooms,area,detail_url"
-CSV_ROW_1 = 'Cozy Downtown Apartment,"€250,000","Helsinki, Kallio",3 rooms,72 m²,/detail/123'
-CSV_ROW_2 = 'Seaside Studio,"€180,000",Espoo,1 room,28 m²,/detail/124'
+CSV_ROW_1 = 'Cozy Downtown Apartment,"€250,000","Rivertown, Dockside",3 rooms,72 m²,/detail/123'
+CSV_ROW_2 = 'Seaside Studio,"€180,000",Lakeside,1 room,28 m²,/detail/124'
 EXPECTED_CSV = (CSV_HEADER + "\n" + CSV_ROW_1 + "\n" + CSV_ROW_2 + "\n").encode("utf-8")
 
 # Header-only CSV for zero records (AC12): 43 bytes.

@@ -12,7 +12,7 @@ AC1_CARD = """
   <h2 class="listing-title">  Cozy   Downtown
     Apartment </h2>
   <span class="listing-price">€250,000</span>
-  <span class="listing-location">Helsinki, Kallio</span>
+  <span class="listing-location">Rivertown, Dockside</span>
   <span class="listing-rooms">3 rooms</span>
   <span class="listing-area">72 m²</span>
   <a class="listing-link" href="/detail/123">View details</a>
@@ -27,7 +27,7 @@ def test_parse_single_valid_card_ac1():
         {
             "title": "Cozy Downtown Apartment",
             "price": "€250,000",
-            "location": "Helsinki, Kallio",
+            "location": "Rivertown, Dockside",
             "rooms": "3 rooms",
             "area": "72 m²",
             "detail_url": "/detail/123",
@@ -39,7 +39,7 @@ def test_parse_missing_optional_fields_ac4():
     """AC4 (R11): absent optional selectors yield None values on the record."""
     html = make_card(
         title="No Price Listing",
-        location="Tampere",
+        location="Hillcrest",
         href="/detail/200",
     )
     records = parse_listings(html)
@@ -47,7 +47,7 @@ def test_parse_missing_optional_fields_ac4():
         {
             "title": "No Price Listing",
             "price": None,
-            "location": "Tampere",
+            "location": "Hillcrest",
             "rooms": None,
             "area": None,
             "detail_url": "/detail/200",
