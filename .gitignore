@@ -29,5 +29,8 @@ htmlcov/
 
 # Scraped artifacts (downloaded pages and generated output)
 page*.html
+*.jsonl
+raw.json
+items.json
 /out/
 /out_*/

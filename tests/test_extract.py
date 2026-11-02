@@ -5,9 +5,16 @@ All data is synthetic and generic; no real site names, keys, or URLs are used.
 
 import json
 
+import pytest
+
 from web_scraper import extractcli
 from web_scraper.extractcli import main as extract_main
-from web_scraper.initial_state import extract_raw
+from web_scraper.initial_state import (
+    InitialStateError,
+    extract_initial_state,
+    extract_raw,
+    select_node,
+)
 
 SAMPLE_STATE = {
     "data": {
@@ -36,6 +43,38 @@ def test_extract_raw_returns_whole_state_when_no_path():
 def test_extract_raw_returns_node_at_path():
     node = extract_raw(_page(SAMPLE_STATE), "data.results.items")
     assert node == SAMPLE_STATE["data"]["results"]["items"]
+
+
+def test_extract_handles_bare_undefined_outside_strings():
+    html = '<script>window.__INITIAL_STATE__ = {"a": undefined, "b": 1};</script>'
+    assert extract_initial_state(html) == {"a": None, "b": 1}
+
+
+def test_extract_preserves_undefined_inside_string_values():
+    # The word "undefined" inside a string value must NOT be rewritten to null.
+    html = (
+        "<script>window.__INITIAL_STATE__ = "
+        '{"note": "value is undefined here", "x": undefined};</script>'
+    )
+    assert extract_initial_state(html) == {"note": "value is undefined here", "x": None}
+
+
+def test_extract_stops_at_balanced_brace_ignoring_trailing_script():
+    html = (
+        '<script>window.__INITIAL_STATE__ = {"a": {"b": 2}};'
+        'window.OTHER = {"not": "mine"};</script>'
+    )
+    assert extract_initial_state(html) == {"a": {"b": 2}}
+
+
+def test_extract_missing_marker_raises():
+    with pytest.raises(InitialStateError):
+        extract_initial_state("<html>no state here</html>")
+
+
+def test_select_node_bad_path_raises():
+    with pytest.raises(InitialStateError):
+        select_node(SAMPLE_STATE, "data.missing.items")
 
 
 def test_cli_writes_whole_state_as_pretty_json(tmp_path):

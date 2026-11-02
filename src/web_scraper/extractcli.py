@@ -1,8 +1,8 @@
 """Stage: capture the raw embedded ``__INITIAL_STATE__`` JSON, unmapped.
 
-Sits between ``web-scraper-fetch`` (saves raw HTML) and ``web-scraper-json``
-(maps to the six-field model). It extracts the original JSON data as-is so the
-mapping to your own model stays a separate, later step. No profile is needed.
+Follows ``web-scraper-fetch`` (which saves the raw HTML): it extracts the
+original JSON data as-is so mapping to any downstream model stays a separate
+concern. No profile or field mapping is applied.
 """
 
 import argparse

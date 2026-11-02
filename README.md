@@ -53,56 +53,41 @@ the target site.
 
 Many modern listing sites are React/Vue apps: the rendered HTML uses
 build-hashed class names and the actual listings are embedded as a JSON state
-object (`window.__INITIAL_STATE__`). The HTML-card parser can't read those, so a
-second parser handles them:
+object (`window.__INITIAL_STATE__`). The HTML-card parser can't read those, so
+`web-scraper-extract` captures that embedded JSON **as-is** — the original data,
+unchanged. Mapping it to any particular model is intentionally left to a
+downstream consumer; this tool only stores the raw data.
 
 ```bash
 # Stage 1 — download the page (data is embedded in the HTML)
 uv run web-scraper-fetch --url "https://example.com/listings?page=1" --output page1.html
 
-# Stage 2 — extract listings from the embedded __INITIAL_STATE__ blob
-uv run web-scraper-json --input page1.html --output-dir out --profile mysite.json
-```
-
-`web-scraper-json` has **no built-in site profile** — you must pass a `--profile`
-JSON file that declares the dotted path to the listings array and maps each
-output field to a source key:
-
-```json
-{
-  "state_path": "data.searchResults.items",
-  "fields": { "title": "address", "price": "price", "area": "livingArea" },
-  "detail_url_template": "https://example.com/listing/{value}",
-  "detail_url_field": "slug"
-}
-```
-
-Arguments: `--input` (saved HTML), `--output-dir`, `--profile` (required JSON
-mapping), `--jsonl-name`/`--csv-name` (optional). As always, **check the site's
-`robots.txt` and terms of service** — reading JSON embedded in an allowed page is
-one thing, but many sites disallow their underlying `/api` endpoints, and
-robots.txt permission is not the same as terms-of-service permission.
-
-### Capture the raw JSON first (optional)
-
-If you prefer to keep the **original JSON data** before mapping it to the
-six-field model, `web-scraper-extract` saves the embedded state as-is — no
-profile, no mapping:
-
-```bash
-# Dump the whole __INITIAL_STATE__ object (pretty-printed)
+# Stage 2a — dump the whole __INITIAL_STATE__ object (pretty-printed) to inspect it
 uv run web-scraper-extract --input page1.html --output raw.json
 
-# Or just the listings array, one raw object per line
+# Stage 2b — find the dotted path to the listings array in raw.json, then extract
+#            just that array, one raw object per line:
 uv run web-scraper-extract --input page1.html --output items.jsonl \
-  --state-path data.results.items --jsonl
+  --state-path <path.to.listings.array> --jsonl
 ```
 
-This keeps data capture and model-mapping as separate steps: fetch → extract raw
-JSON → (later) map to your model with `web-scraper-json`. Arguments: `--input`
-(saved HTML), `--output` (JSON file), `--state-path` (optional dotted path to a
-sub-node), `--jsonl` (optional; when the node is an array, write one object per
-line). Exit codes: `0` success, `1` on read/extract/write failure.
+> The `--state-path` is **site-specific** — there is no universal value. Always
+> run stage 2a first (no `--state-path`) to dump the full state, locate the array
+> of listings inside it, and use that dotted path (e.g. `foo.searchResults.bar`)
+> in stage 2b. If the path is wrong or missing, the command exits `1` with
+> `error: path not found: ...`.
+
+Arguments: `--input` (saved HTML), `--output` (JSON file), `--state-path`
+(optional dotted path to a sub-node; omit to dump the whole state), `--jsonl`
+(optional; when the node is an array, write one object per line). Exit codes:
+`0` success, `1` on read/extract/write failure.
+
+The resulting `items.jsonl` is ready to use directly — one original JSON object
+per line — with any downstream tool (`jq`, `pandas.read_json(..., lines=True)`,
+DuckDB's `read_json_auto`, etc.). As always, **check the site's `robots.txt` and
+terms of service**: reading JSON embedded in an allowed page is one thing, but
+many sites disallow their underlying `/api` endpoints, and robots.txt permission
+is not the same as terms-of-service permission.
 
 ### Run the parser
 

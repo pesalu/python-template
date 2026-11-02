@@ -1,13 +1,13 @@
-# Functional specification: Fetch stage and embedded-JSON extraction
+# Functional specification: Fetch stage and raw embedded-JSON capture
 
-Status: Draft (round 1)
+Status: Draft (round 2)
 Feature file: `docs/specs/fetch-and-json-extraction.md`
 Applies to package: `src/web_scraper/`
 
 > Companion to [docs/specs/web-scraper.md](web-scraper.md) (the HTML-card
 > parser). This plain Python package (hatchling + uv, Python `>=3.12`) is not a
 > Databricks bundle. These two commands extend the project with a network
-> download stage and an alternative parser for single-page-app sites whose
+> download stage and a **raw capture** stage for single-page-app sites whose
 > listings are embedded as JSON. All examples use generic placeholders
 > (`https://example.com`, generic JSON keys); no real site is assumed.
 
@@ -16,37 +16,25 @@ Applies to package: `src/web_scraper/`
 ## 1. Purpose and scope
 
 ### Purpose
-Provide two companion command-line tools:
+Provide two companion command-line tools that **capture raw data as-is** —
+mapping to any particular model is intentionally left to a downstream consumer:
 1. `web-scraper-fetch` — download a single web page over HTTP(S) and save its raw
-   body to a local file (stage 1), so parsing stays deterministic and offline.
-2. `web-scraper-json` — parse listings from a saved HTML file whose data is
-   embedded as a JavaScript `window.__INITIAL_STATE__` object (single-page-app
-   sites), mapping them, via a caller-supplied profile, onto the same six-field
-   record schema and JSONL/CSV output as the HTML parser.
-
-A third tool, `web-scraper-extract`, captures the **raw original JSON** (the
-embedded state, or a sub-node) as-is, without mapping to the six-field model, so
-data capture and model-mapping remain separate steps.
-
-### In scope
-- A thin HTTP(S) GET to a file (`web-scraper-fetch`).
-- Raw capture of the embedded JSON, unmapped (`web-scraper-extract`).
-- Extraction of a `window.__INITIAL_STATE__` object, tolerating the JS literal
-  `undefined`, and config-driven mapping to records (`web-scraper-json`).
+   body to a local file.
+2. `web-scraper-extract` — read a saved HTML file whose data is embedded as a
+   JavaScript `window.__INITIAL_STATE__` object, and write the **original JSON**
+   (the whole state, or a sub-node) to a file unchanged.
 
 ### Non-goals (explicit)
-- No retries, rate limiting, caching, or `robots.txt` enforcement in the fetch
-  stage. **The operator is responsible for honoring each target site's
-  `robots.txt` AND terms of service.** `robots.txt` permission is not
-  terms-of-service permission.
+- **No mapping / normalization to a fixed model.** Both commands emit the raw
+  bytes/JSON; shaping the data into a schema is a downstream concern.
+- No retries, rate limiting, caching, or `robots.txt` enforcement. **The operator
+  is responsible for honoring each target site's `robots.txt` AND terms of
+  service.** `robots.txt` permission is not terms-of-service permission.
 - No JavaScript execution / headless rendering.
-- No crawling or pagination: `web-scraper-fetch` downloads one URL per run;
-  `web-scraper-json` parses exactly one saved file's embedded state per run.
+- No crawling or pagination: one URL per `web-scraper-fetch` run; one saved file
+  per `web-scraper-extract` run.
 - Only the `window.__INITIAL_STATE__` marker is supported; other markers
-  (e.g. `__NEXT_DATA__`, `__NUXT__`, JSON-LD) are out of scope.
-- No semantic validation of fields: the profile author decides which source key
-  maps to `price`, `area`, etc.; the tool does not interpret meaning.
-- No built-in site profile ships with the tool.
+  (`__NEXT_DATA__`, `__NUXT__`, JSON-LD) are out of scope.
 
 ---
 
@@ -61,45 +49,33 @@ data capture and model-mapping remain separate steps.
 - `--timeout` (float seconds, optional): socket timeout; a positive default is
   used when omitted.
 
-### 2.2 `web-scraper-json`
+### 2.2 `web-scraper-extract`
 - `--input` (path, required): a saved HTML file containing a
   `window.__INITIAL_STATE__ = {…}` assignment, UTF-8.
-- `--output-dir` (path, required): output directory (created if missing).
-- `--profile` (path, **required**): a JSON profile (§2.3). There is no default.
-- `--jsonl-name` / `--csv-name` (optional): output filenames, validated by the
-  same rule as [web-scraper.md §3.1/§6.2](web-scraper.md) (reject empty/whitespace,
-  `.`/`..`, names containing `/` or `\`, names differing from their basename, or
-  the two names being equal → exit 2). Defaults `listings.jsonl` / `listings.csv`.
+- `--output` (path, required): file to write the raw JSON to.
+- `--state-path` (string, optional): dotted path to a sub-node (e.g. a listings
+  array); omit to write the whole state object.
+- `--jsonl` (flag, optional): when the selected node is an array, write one JSON
+  object per line instead of a single pretty-printed document.
 
-### 2.3 Profile schema (JSON object)
-| Key                   | Type                     | Required | Meaning                                                            |
-|-----------------------|--------------------------|----------|--------------------------------------------------------------------|
-| `state_path`          | string (dotted)          | Yes      | Path to the listings array inside the state, e.g. `data.results.items`. |
-| `fields`              | object (string→string)   | No       | Map of output field → source key. Keys are a subset of the six-field schema. |
-| `detail_url_template` | string or null           | No       | A `str.format` template using `{value}`, e.g. `https://example.com/listing/{value}`. |
-| `detail_url_field`    | string or null           | No       | Source key whose value fills `{value}`.                            |
-
-A profile missing `state_path`, or that is not a JSON object, is invalid
-(§6, exit 1).
-
-### 2.4 Embedded-state format
+### 2.3 Embedded-state format
 The input HTML contains the substring `window.__INITIAL_STATE__ = ` followed by a
 balanced `{…}` JSON-like object. The object may contain the bare JavaScript
-literal `undefined` as a value (not valid JSON); it is treated as `null` (R3).
+literal `undefined` as a value (not valid JSON); it is treated as `null` (R4).
 
 ---
 
 ## 3. Outputs
 
-`web-scraper-json` writes `listings.jsonl` and `listings.csv` into `--output-dir`
-using the **identical format, field order, encoding, and quoting** defined in
-[web-scraper.md §3](web-scraper.md): six columns `title, price, location, rooms,
-area, detail_url`, UTF-8, JSONL one object per line (LF after every line, keys in
-field order, nulls as JSON `null`), CSV with header and minimal quoting, empty
-fields for nulls. Records are written in the order listings appear in the array.
+- `web-scraper-fetch` writes the decoded response body verbatim to `--output`
+  as UTF-8.
+- `web-scraper-extract` writes, to `--output` (UTF-8, non-ASCII preserved):
+  - the whole `__INITIAL_STATE__` object as pretty-printed JSON when no
+    `--state-path` is given;
+  - the node at `--state-path` otherwise;
+  - with `--jsonl` and an array node, one compact JSON object per line.
 
-`web-scraper-fetch` writes the decoded response body verbatim to `--output` as
-UTF-8.
+  The output is the **original data**, not reshaped into any schema.
 
 ---
 
@@ -111,62 +87,43 @@ UTF-8.
 - **R2 — Scheme restriction.** Only `http://` and `https://` URLs are accepted;
   any other scheme (e.g. `file://`) is rejected before any request is made
   (§6, exit 2), preventing local-file or non-HTTP access.
-- **R3 — Decoding.** The response body is decoded using the HTTP response
-  charset when present, otherwise UTF-8, replacing undecodable bytes; the output
-  file is written UTF-8.
-- **R4 — State location.** `web-scraper-json` finds the first occurrence of
-  `window.__INITIAL_STATE__ = ` and parses the balanced `{…}` object that
-  follows. If the marker is absent, it is an extraction error (exit 1).
-- **R5 — Balanced-object scan.** The object spans from its opening `{` to the
-  matching `}` at depth zero, tracking string literals and escapes so braces
-  inside strings do not affect nesting. An unterminated object is an error.
-- **R6 — `undefined` handling.** A bare token `undefined` that appears **outside
-  any string value** is rewritten to `null`; an occurrence inside a string value
-  is left unchanged. The cleaned text is parsed as JSON.
-- **R7 — Listings selection.** `state_path` is split on `.` and navigated through
-  nested objects. A missing segment, or a terminal value that is not an array, is
-  an error (exit 1).
-- **R8 — Field mapping.** For each array entry that is an object, each output
-  field in `fields` is set to the string form of the source key's value, or
-  `null` when the key is absent or its value is `null`. Booleans map to the
-  strings `"true"`/`"false"`. Non-object entries are skipped.
-- **R9 — Detail URL.** When both `detail_url_template` and `detail_url_field` are
-  present and the field's value is neither absent, `null`, nor empty string,
-  `detail_url` = `template.format(value=<field value>)`; otherwise `detail_url`
-  is `null`.
-- **R10 — Record shape.** A record contains the keys named in `fields` plus
-  `detail_url`. The output writers pad any of the six schema columns not present
-  in a record with `null` (JSONL) / empty (CSV), per [web-scraper.md §3](web-scraper.md).
-- **R11 — Atomic output.** `web-scraper-json` writes both output files to temp
-  files in `--output-dir`, then `os.replace`s them into their final names only
-  after both writes succeed. On any OS error it removes committed finals and temp
-  files so no partial or looks-successful output remains (exit 1).
-- **R12 — Idempotency.** Re-running either command with the same inputs produces
-  the same output and overwrites prior output; neither appends.
-- **R13 — Raw capture.** `web-scraper-extract` writes the embedded state as-is:
-  the whole `__INITIAL_STATE__` object when no `--state-path` is given, or the
-  node at that dotted path otherwise. With `--jsonl`, an array node is written as
-  one JSON object per line; otherwise the node is written as a single
-  pretty-printed JSON document (UTF-8, non-ASCII preserved). No field mapping or
-  profile is applied. The write is atomic (temp file then `os.replace`, temp
-  removed on failure). A missing marker, unbalanced object, or missing path is an
+- **R3 — Decoding.** The response body is decoded using the HTTP response charset
+  when present, otherwise UTF-8, replacing undecodable bytes; the output file is
+  written UTF-8.
+- **R4 — `undefined` handling.** During extraction, a bare token `undefined` that
+  appears **outside any string value** is rewritten to `null`; an occurrence
+  inside a string value is left unchanged. The cleaned text is parsed as JSON.
+- **R5 — State location + balanced scan.** `web-scraper-extract` finds the first
+  occurrence of `window.__INITIAL_STATE__ = ` and parses the balanced `{…}`
+  object that follows, tracking string literals and escapes so braces inside
+  strings do not affect nesting. A missing marker or unterminated object is an
   error (exit 1).
+- **R6 — Node selection.** `--state-path` is split on `.` and navigated through
+  nested objects. A missing segment is an error (exit 1). With no `--state-path`,
+  the whole state object is used.
+- **R7 — Raw, unmapped output.** The extracted node is serialized without
+  modification of keys or values (numbers, booleans, nested objects, and arrays
+  are preserved). With `--jsonl`, an array is written one element per line;
+  otherwise a single pretty-printed JSON document (2-space indent) is written.
+- **R8 — Atomic output.** `web-scraper-extract` writes to a temp file then
+  `os.replace`s it into the final name; on any OS error the temp file is removed
+  and no partial output remains (exit 1).
+- **R9 — Idempotency.** Re-running either command with the same inputs produces
+  the same output and overwrites prior output; neither appends.
 
 ---
 
 ## 5. Data quality rules
 
-| Condition                                             | Classification | Action                        | Rule |
-|-------------------------------------------------------|----------------|-------------------------------|------|
-| Array entry is a JSON object                          | Valid          | Mapped to a record            | R8   |
-| Array entry is not an object (string/number/null)     | Invalid        | Skipped                       | R8   |
-| Source key absent or `null`                           | Valid          | Field set to `null`           | R8   |
-| `detail_url_field` absent/`null`/empty                | Valid          | `detail_url` set to `null`    | R9   |
-| `state_path` missing or not an array                  | Error          | Exit 1                        | R7   |
-| Marker absent / object unbalanced / unparseable       | Error          | Exit 1                        | R4,R5 |
+| Condition                                       | Action                                | Rule |
+|-------------------------------------------------|---------------------------------------|------|
+| Bare `undefined` outside a string               | Rewritten to `null`                   | R4   |
+| `undefined` inside a string value               | Preserved verbatim                    | R4   |
+| Marker absent / object unbalanced / unparseable | Error, exit 1                         | R5   |
+| `--state-path` segment missing                  | Error, exit 1                         | R6   |
+| Selected node is not an array, with `--jsonl`   | Written as a single pretty document   | R7   |
 
-There is no quarantine output; invalid entries are silently skipped (they are not
-counted separately in the MVP).
+No listing is dropped, renamed, or reshaped; the output mirrors the source.
 
 ---
 
@@ -178,20 +135,12 @@ counted separately in the MVP).
 - Exit codes: 0 success; 1 fetch failure (URL/network error) or write failure;
   2 argument error (missing required arg, non-http(s) scheme).
 
-### 6.2 `web-scraper-json`
-- Entry point: `web-scraper-json = "web_scraper.jsoncli:main"`.
-- On success prints `listings=<N> written=<N>` and exits 0 (`<N>` = records
-  written; invalid/skipped entries are not included).
-- Exit codes: 0 success; 1 unreadable input, invalid/unloadable profile,
-  extraction/selection failure, or output write failure; 2 argument error
-  (missing `--input`/`--output-dir`/`--profile`, or invalid/duplicate output names).
-
-### 6.3 `web-scraper-extract`
+### 6.2 `web-scraper-extract`
 - Entry point: `web-scraper-extract = "web_scraper.extractcli:main"`.
-- Args: `--input` (required saved HTML), `--output` (required JSON file),
-  `--state-path` (optional dotted path), `--jsonl` (optional flag).
-- On success prints `extracted <N> to <path>` (`<N>` = array length when the node
-  is a list, else 1) and exits 0.
+- Args: `--input` (required), `--output` (required), `--state-path` (optional),
+  `--jsonl` (optional flag).
+- On success prints `extracted <N> to <path>` (`<N>` = array length when the
+  selected node is a list, else 1) and exits 0.
 - Exit codes: 0 success; 1 unreadable input, extraction/selection failure, or
   output write failure; 2 argument error (missing `--input`/`--output`).
 
@@ -199,20 +148,16 @@ counted separately in the MVP).
 
 ## 7. Error handling and edge cases
 
-| Case                                       | Behavior                                             | Rule / Exit |
-|--------------------------------------------|------------------------------------------------------|-------------|
-| `--url` not http(s)                        | No request; exit 2.                                  | R2 / 6.1    |
-| Network/URL error                          | No output; stderr message; exit 1.                   | 6.1         |
-| Output file unwritable (fetch)             | Exit 1.                                              | 6.1         |
-| `--profile` missing on command line        | Argparse usage error; exit 2.                        | 6.2         |
-| Profile file unreadable / not JSON / no `state_path` | stderr message; exit 1.                     | R7 / 6.2    |
-| `__INITIAL_STATE__` marker absent          | Extraction error; exit 1.                            | R4          |
-| Unbalanced `{…}`                           | Error; exit 1.                                       | R5          |
-| `undefined` inside a string value          | Preserved verbatim (not rewritten).                  | R6          |
-| `state_path` segment missing / not array   | Error; exit 1.                                       | R7          |
-| Empty listings array                        | 0 records; empty JSONL, header-only CSV; exit 0.    | R10, 6.2    |
-| Non-object array entry                      | Skipped.                                             | R8          |
-| Output write fails mid-way                  | No partial/looks-successful files; exit 1.           | R11         |
+| Case                                       | Behavior                                 | Rule / Exit |
+|--------------------------------------------|------------------------------------------|-------------|
+| `--url` not http(s)                        | No request; exit 2.                      | R2 / 6.1    |
+| Network/URL error                          | No output; stderr message; exit 1.       | 6.1         |
+| Output file unwritable                     | Exit 1 (temp removed for extract).       | R8 / 6      |
+| `__INITIAL_STATE__` marker absent          | Error; exit 1.                           | R5          |
+| Unbalanced `{…}`                           | Error; exit 1.                           | R5          |
+| `undefined` inside a string value          | Preserved verbatim.                      | R4          |
+| `--state-path` segment missing             | Error; exit 1.                           | R6          |
+| Empty array node                            | Written (empty JSONL or `[]`); exit 0.  | R7          |
 
 ---
 
@@ -228,7 +173,7 @@ counted separately in the MVP).
 - **When** fetched to `out.html`.
 - **Then** exit 0 and `out.html` contains exactly `<html>€</html>`.
 
-### AC3 — Bare `undefined` becomes null; in-string preserved (R6)
+### AC3 — Bare `undefined` becomes null; in-string preserved (R4)
 - **Given** `window.__INITIAL_STATE__ = {"note": "value is undefined here", "x": undefined};`.
 - **When** the state is extracted.
 - **Then** the parsed object equals `{"note": "value is undefined here", "x": null}`.
@@ -238,65 +183,43 @@ counted separately in the MVP).
 - **When** extracted.
 - **Then** the result equals `{"a": {"b": 2}}`.
 
-### AC5 — Mapping and detail URL (R7, R8, R9)
-- **Given** state `{"data": {"results": {"items": [{"ref": "a1", "street": "1 Example Street", "cost": 47120.47}]}}}`
-  and profile `{"state_path": "data.results.items", "fields": {"title": "street", "price": "cost"},
-  "detail_url_template": "https://example.com/listing/{value}", "detail_url_field": "ref"}`.
-- **When** parsed.
-- **Then** the single record is
-  `{"title": "1 Example Street", "price": "47120.47", "detail_url": "https://example.com/listing/a1"}`.
+### AC5 — Whole-state capture preserves data (R7)
+- **Given** a page whose state is `{"data": {"results": {"items": [{"ref": "a1", "cost": 100}]}}}`.
+- **When** `web-scraper-extract` runs with no `--state-path`.
+- **Then** the output parses back to the identical state object.
 
-### AC6 — Missing source key → null; missing url field → null detail_url (R8, R9)
-- **Given** one item `{"street": "Only Street"}` with profile fields `{"title": "street", "price": "cost"}`,
-  `detail_url_field` `"ref"`.
-- **When** mapped.
-- **Then** the record is `{"title": "Only Street", "price": null, "detail_url": null}`.
+### AC6 — Node selection + JSONL (R6, R7)
+- **Given** the same state and `--state-path data.results.items --jsonl`.
+- **When** `web-scraper-extract` runs.
+- **Then** exit 0, and the single output line parses to
+  `{"ref": "a1", "cost": 100}` (original keys, unmapped).
 
-### AC7 — `--profile` is required (6.2)
-- **Given** `--input page.html --output-dir out` with no `--profile`.
-- **When** `web-scraper-json` runs.
-- **Then** it exits 2 and writes no output.
-
-### AC8 — Missing marker → exit 1 (R4)
+### AC7 — Missing marker → exit 1 (R5)
 - **Given** an input file containing `<html>no state</html>`.
-- **When** `web-scraper-json` runs with a valid profile.
+- **When** `web-scraper-extract` runs.
 - **Then** it exits 1 and writes no output.
 
-### AC9 — End-to-end JSONL + CSV (R10, R11)
-- **Given** a saved page whose state yields two items under `data.results.items`.
-- **When** `web-scraper-json` runs with a matching profile.
-- **Then** exit 0, prints `listings=2 written=2`, `listings.jsonl` has two lines,
-  and `listings.csv` begins with `title,price,location,rooms,area,detail_url\n`.
+### AC8 — Missing `--state-path` segment → exit 1 (R6)
+- **Given** a valid state but `--state-path data.missing`.
+- **When** `web-scraper-extract` runs.
+- **Then** it exits 1.
 
-### AC10 — Atomic failure leaves no output (R11)
-- **Given** a run where the CSV write raises an OS error after the JSONL temp is
-  written.
-- **When** `web-scraper-json` runs.
-- **Then** it exits 1 and neither final output file nor any `*.tmp` file remains
-  in `--output-dir`.
-
-### AC11 — Invalid output name → exit 2 (6.2)
-- **Given** `--jsonl-name a/b.jsonl`.
-- **When** `web-scraper-json` runs with an otherwise valid invocation.
-- **Then** it exits 2 and writes no output.
-
-### AC12 — Raw capture preserves original data (R13)
-- **Given** state `{"data": {"results": {"items": [{"ref": "a1", "cost": 100}]}}}`.
-- **When** `web-scraper-extract --state-path data.results.items --jsonl` runs.
-- **Then** exit 0, and the output's single line parses back to
-  `{"ref": "a1", "cost": 100}` (original keys, unmapped).
+### AC9 — Atomic write failure leaves no temp (R8)
+- **Given** a run where `os.replace` raises after the temp file is written.
+- **When** `web-scraper-extract` runs.
+- **Then** it exits 1 and no `*.tmp` or final output file remains.
 
 ---
 
 ## 9. Non-functional requirements (measurable only)
 
-- **NFR1 — No network in the JSON stage.** `web-scraper-json` opens zero network
-  sockets (it reads a local file only).
-- **NFR2 — Determinism.** Given identical input file, profile, and arguments,
-  `web-scraper-json` produces byte-identical output across runs.
+- **NFR1 — No network in the extract stage.** `web-scraper-extract` opens zero
+  network sockets (it reads a local file only).
+- **NFR2 — Determinism.** Given identical input and arguments, both commands
+  produce byte-identical output across runs.
 - **NFR3 — Encoding.** All output bytes are valid UTF-8 (no BOM).
 - **NFR4 — No new runtime dependency.** Both commands use only the standard
-  library and the already-present `beautifulsoup4` is not required by them.
+  library.
 
 ---
 
@@ -305,28 +228,24 @@ counted separately in the MVP).
 ### Assumptions
 - **A1.** The embedded object is JSON apart from bare `undefined` values; other
   JS-only constructs (functions, comments, single quotes, trailing commas) are
-  not expected and would cause an extraction error (exit 1). This is acceptable
-  for the MVP.
-- **A2.** Numeric and boolean source values are acceptable as raw stringified
-  output; no locale/number formatting is applied.
-- **A3.** Skipped non-object entries are not separately counted in the MVP
-  summary (`listings=<N> written=<N>` reflects records written).
+  not expected and would cause an extraction error (exit 1).
 
 ### Open questions
-- **Q1.** Should the JSON stage follow multi-page state (pagination) in a future
-  version, and if so how is the next page's URL/path discovered? (Out of scope now.)
-- **Q2.** Should additional embedded-state markers (`__NEXT_DATA__`, `__NUXT__`,
-  JSON-LD) be supported via a configurable marker in the profile? (Out of scope now.)
+- **Q1.** Should additional embedded-state markers (`__NEXT_DATA__`, `__NUXT__`,
+  JSON-LD) be supported via a configurable marker? (Out of scope now.)
 
 ---
 
 ## 11. Revision log
 
+### Round 2 — Mapping removed
+- Removed the `web-scraper-json` command and all field-mapping / profile content.
+  The tool now captures raw data only (`web-scraper-fetch` + `web-scraper-extract`);
+  mapping to a model is a downstream concern. Self-consistency pass: exit codes
+  (0/1/2) and the raw-output contract are internally consistent; no real site
+  names or site-specific keys are used; no contradiction with
+  `docs/specs/web-scraper.md` (that spec governs the separate HTML-card parser).
+
 ### Round 1 — Initial draft
-- Documents the already-implemented `web-scraper-fetch` and `web-scraper-json`
-  commands. Self-consistency pass: exit codes (0/1/2), the six-field schema, and
-  output format are aligned with `docs/specs/web-scraper.md`; the JSON stage
-  reuses that spec's filename-validation rule and JSONL/CSV format. No real site
-  names, domains, or site-specific JSON keys are used. No contradiction with the
-  HTML-parser spec was found (the JSON stage is an alternative input path to the
-  same output contract).
+- Documented `web-scraper-fetch`, `web-scraper-extract`, and the (now removed)
+  `web-scraper-json` mapping command.

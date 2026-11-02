@@ -1,17 +1,12 @@
-"""Extract listing records from a React ``window.__INITIAL_STATE__`` JSON blob.
+"""Extract the raw ``window.__INITIAL_STATE__`` JSON embedded in a page.
 
 Some listing sites render as single-page apps whose data is embedded in the page
 as a JavaScript state object rather than as HTML cards. This module locates that
-object, parses it (tolerating the JS literal ``undefined``), navigates to the
-listings array, and maps each entry onto the same six-field record shape used by
-the HTML parser.
-
-Field mapping is driven by a caller-supplied profile (see ``Profile``) so any
-site can be handled without code changes; no site-specific profile is built in.
+object and parses it (tolerating the JS literal ``undefined``) so the original
+JSON can be captured as-is; mapping to any downstream model is out of scope.
 """
 
 import json
-from dataclasses import dataclass, field
 from typing import Any
 
 _MARKER = "window.__INITIAL_STATE__ = "
@@ -20,21 +15,6 @@ _UNDEFINED = "undefined"
 
 class InitialStateError(Exception):
     """Raised when the embedded state cannot be located, parsed, or navigated."""
-
-
-@dataclass(frozen=True)
-class Profile:
-    """Declarative mapping from a site's JSON state to output records.
-
-    ``state_path`` is a dotted path to the listings array. ``fields`` maps each
-    output field to a source key in a listing object. ``detail_url_template`` is
-    an optional ``str.format`` template filled from ``detail_url_field``.
-    """
-
-    state_path: str
-    fields: dict[str, str] = field(default_factory=dict)
-    detail_url_template: str | None = None
-    detail_url_field: str | None = None
 
 
 def _extract_object(text: str, start: int) -> str:
@@ -122,55 +102,9 @@ def select_node(state: dict[str, Any], dotted_path: str) -> Any:
     return node
 
 
-def select_listings(state: dict[str, Any], dotted_path: str) -> list[Any]:
-    """Navigate ``dotted_path`` in ``state`` and return the listings array."""
-    node = select_node(state, dotted_path)
-    if not isinstance(node, list):
-        raise InitialStateError(f"listings path {dotted_path!r} is not an array")
-    return node
-
-
 def extract_raw(html: str, state_path: str | None = None) -> Any:
     """Return the raw (unmapped) embedded state, or the node at ``state_path``."""
     state = extract_initial_state(html)
     if state_path:
         return select_node(state, state_path)
     return state
-
-
-def _to_str(value: Any) -> str | None:
-    if value is None:
-        return None
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    return str(value)
-
-
-def map_listings(items: list[Any], profile: Profile) -> list[dict[str, str | None]]:
-    """Map raw listing objects onto six-field records using ``profile``."""
-    records: list[dict[str, str | None]] = []
-    for item in items:
-        if not isinstance(item, dict):
-            continue
-        record: dict[str, str | None] = {
-            out_field: _to_str(item.get(src_key)) for out_field, src_key in profile.fields.items()
-        }
-        record["detail_url"] = _detail_url(item, profile)
-        records.append(record)
-    return records
-
-
-def _detail_url(item: dict[str, Any], profile: Profile) -> str | None:
-    if not profile.detail_url_template or not profile.detail_url_field:
-        return None
-    value = item.get(profile.detail_url_field)
-    if value is None or value == "":
-        return None
-    return profile.detail_url_template.format(value=value)
-
-
-def parse_initial_state(html: str, profile: Profile) -> list[dict[str, str | None]]:
-    """Full pipeline: extract state, select listings, and map them to records."""
-    state = extract_initial_state(html)
-    items = select_listings(state, profile.state_path)
-    return map_listings(items, profile)
