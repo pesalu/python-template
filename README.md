@@ -151,6 +151,47 @@ Each page is matched by class names (not tag names). A minimal page looks like:
 | `1`  | The `--input` file cannot be read, or output cannot be written.      |
 | `2`  | Invalid arguments (e.g. `--max-pages 0`, or a bad/duplicate name).   |
 
+## Docker
+
+```bash
+docker build -t web-scraper .
+
+# Where to store the results on your machine (any folder you like)
+DATA=$HOME/scrapes/site-a
+mkdir -p "$DATA"
+
+# Pick the command to run: web-scraper-fetch, web-scraper-extract or web-scraper
+RUN="docker run --rm --user $(id -u):$(id -g) -v $DATA:/data web-scraper"
+
+$RUN web-scraper-fetch --url https://example.com/listings --output page1.html
+$RUN web-scraper-extract --input page1.html --output raw.json
+$RUN web-scraper --input page1.html --output-dir out
+```
+
+The container's working directory is `/data`, which is your `$DATA` folder, so relative paths land
+there. Use an absolute host path for `DATA` (`-v` treats a bare name as a Docker volume).
+`--user` makes the files yours instead of root's. The arguments are the same as without Docker.
+
+### All steps in one command
+
+For single-page-app sites (listings embedded as JSON): download the page, save the whole embedded
+state as `raw.json`, and save just the listings as `items.jsonl`.
+
+```bash
+STATE_PATH=data.results.items   # site-specific dotted path to the listings array
+
+docker run --rm --user $(id -u):$(id -g) -v $DATA:/data \
+  -e URL=https://example.com/listings -e STATE_PATH="$STATE_PATH" web-scraper sh -c '
+    web-scraper-fetch   --url "$URL" --output page1.html &&
+    web-scraper-extract --input page1.html --output raw.json &&
+    web-scraper-extract --input page1.html --output items.jsonl --state-path "$STATE_PATH" --jsonl'
+```
+
+The steps run in order and stop at the first one that fails; the container's exit code is that
+step's exit code. `STATE_PATH` is the path to the listings inside the embedded JSON; find it by
+looking in the dumped `raw.json` (see above). For plain HTML-card sites (no embedded JSON), replace
+the two extract steps with `web-scraper --input page1.html --output-dir out`.
+
 ## Development
 
 ```bash
