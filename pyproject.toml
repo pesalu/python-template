@@ -31,6 +31,7 @@ Homepage = "https://github.com/yourname/sample-web-scraper"
 web-scraper = "web_scraper.main:main"
 web-scraper-fetch = "web_scraper.download:main"
 web-scraper-extract = "web_scraper.extractcli:main"
+web-scraper-run = "web_scraper.run:main"
 
 # Optional dependency groups (installed via `uv sync --group dev` or similar), separate
 # from the runtime dependencies declared in [project].

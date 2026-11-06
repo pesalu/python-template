@@ -6,8 +6,10 @@ COPY pyproject.toml README.md ./
 COPY src ./src
 RUN pip install --no-cache-dir .
 
-# Mount a host folder here to keep the results.
+# Mount a volume here to keep the results.
 WORKDIR /data
 ENV PYTHONUNBUFFERED=1
 
-CMD ["web-scraper", "--help"]
+# Default job: needs SCRAPER_URL (and optionally SCRAPER_STATE_PATH). Override the command to run
+# any single tool, e.g. `web-scraper-fetch --help`.
+CMD ["web-scraper-run"]

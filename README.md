@@ -174,23 +174,25 @@ there. Use an absolute host path for `DATA` (`-v` treats a bare name as a Docker
 
 ### All steps in one command
 
-For single-page-app sites (listings embedded as JSON): download the page, save the whole embedded
-state as `raw.json`, and save just the listings as `items.jsonl`.
+With no command, the container runs `web-scraper-run` (single-page-app sites: listings embedded as
+JSON). It downloads the page, saves the whole embedded state as `raw_<timestamp>.json`, and, when
+`SCRAPER_STATE_PATH` is set, saves just the listings as `items_<timestamp>.jsonl`. The page itself
+is saved as `page1_<timestamp>.html`. The timestamp is the UTC start time of the run, for example
+`raw_20261106T170703Z.json`, so a new run never overwrites the files of an earlier one.
 
 ```bash
-STATE_PATH=data.results.items   # site-specific dotted path to the listings array
-
 docker run --rm --user $(id -u):$(id -g) -v $DATA:/data \
-  -e URL=https://example.com/listings -e STATE_PATH="$STATE_PATH" web-scraper sh -c '
-    web-scraper-fetch   --url "$URL" --output page1.html &&
-    web-scraper-extract --input page1.html --output raw.json &&
-    web-scraper-extract --input page1.html --output items.jsonl --state-path "$STATE_PATH" --jsonl'
+  -e SCRAPER_URL=https://example.com/listings \
+  -e SCRAPER_STATE_PATH=data.results.items \
+  web-scraper
 ```
 
-The steps run in order and stop at the first one that fails; the container's exit code is that
-step's exit code. `STATE_PATH` is the path to the listings inside the embedded JSON; find it by
-looking in the dumped `raw.json` (see above). For plain HTML-card sites (no embedded JSON), replace
-the two extract steps with `web-scraper --input page1.html --output-dir out`.
+It stops at the first step that fails and exits with that step's exit code. `SCRAPER_STATE_PATH`
+is the site-specific path to the listings inside the embedded JSON; find it by looking in the
+dumped `raw.json` (see above). For plain HTML-card sites (no embedded JSON), run `web-scraper`
+yourself as shown at the top of this section.
+
+To run it in the cloud, see [docs/cloud-deployment.md](docs/cloud-deployment.md).
 
 ## Development
 
